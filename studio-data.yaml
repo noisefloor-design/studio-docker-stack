@@ -1,0 +1,29 @@
+services:
+
+  # Time-series database for sensor data
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - /volume1/docker/influxdb2/data:/var/lib/influxdb2
+      - /volume1/docker/influxdb2/config:/etc/influxdb2
+    networks:
+      - internal
+      - proxy
+
+  # Data collection agent for polling external APIs
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - /volume1/docker/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - internal
