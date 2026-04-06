@@ -1,4 +1,179 @@
-services: {}
+services:
+
+  # ─── Core ────────────────────────────────────────────────────────────────────
+
+  # MQTT broker for studio device messaging and automation bus
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "8883:8883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mosquitto/config:/mosquitto/config
+      - ./docker/mosquitto/data:/mosquitto/data
+      - ./docker/mosquitto/log:/mosquitto/log
+    networks:
+      - internal
+
+  # Automation engine
+  node-red:
+    image: nodered/node-red:latest
+    container_name: node-red
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/node-red/data:/data
+    depends_on:
+      - mosquitto
+    networks:
+      - internal
+
+  # ─── Data ─────────────────────────────────────────────────────────────────────
+
+  # Time-series database for sensor data
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/influxdb2/data:/var/lib/influxdb2
+      - ./docker/influxdb2/config:/etc/influxdb2
+    networks:
+      - internal
+      - proxy
+
+  # Data collection agent for polling external APIs
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - internal
+
+  # ─── Monitoring ───────────────────────────────────────────────────────────────
+
+  # Metrics collection system
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prom
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/data:/prometheus
+    networks:
+      - internal
+      - proxy
+
+  # Host-level metrics exporter for Prometheus
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - internal
+
+  # Dashboards and visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/grafana/data:/var/lib/grafana
+    networks:
+      - internal
+      - proxy
+
+  # Network latency monitoring
+  smokeping:
+    image: linuxserver/smokeping:latest
+    container_name: smokeping
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/smokeping/config:/config
+    networks:
+      - internal
+      - proxy
+
+  # ─── Infrastructure ───────────────────────────────────────────────────────────
+
+  # Reverse proxy and TLS/UI gateway
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "81:81"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/nginx-proxy-manager/data:/data
+      - ./docker/nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy
+
+  # Docker management UI
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/portainer/data:/data
+    networks:
+      - internal
+      - proxy
+
+  # User authentication and access control
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./docker/authelia/config:/config
+    networks:
+      - internal
+      - proxy
 
 networks:
   internal:
