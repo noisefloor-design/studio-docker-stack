@@ -175,20 +175,23 @@ services:
       - internal
       - proxy
 
-networks:
-  internal:
-    name: studio-internal
-  proxy:
-    name: studio-proxy
-
-
+  # Local DNS server
   technitium:
     image: technitium/dns-server:latest
     container_name: technitium
+    restart: unless-stopped
     ports:
       - "53:53/udp"
       - "53:53/tcp"
       - "5380:5380"
     volumes:
       - ./docker/technitium:/etc/dns
-    restart: unless-stopped
+    networks:
+      - internal
+      - proxy
+
+networks:
+  internal:
+    name: studio-internal
+  proxy:
+    name: studio-proxy
