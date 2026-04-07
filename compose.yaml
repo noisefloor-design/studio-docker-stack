@@ -1,6 +1,6 @@
 services:
 
-  # ─── Core ────────────────────────────────────────────────────────────────────
+  # --- Core ---
 
   # MQTT broker for studio device messaging and automation bus
   mosquitto:
@@ -33,7 +33,7 @@ services:
     networks:
       - internal
 
-  # ─── Data ─────────────────────────────────────────────────────────────────────
+  # --- Data ---
 
   # Time-series database for sensor data
   influxdb:
@@ -63,7 +63,7 @@ services:
     networks:
       - internal
 
-  # ─── Monitoring ───────────────────────────────────────────────────────────────
+  # --- Monitoring ---
 
   # Metrics collection system
   prometheus:
@@ -128,7 +128,7 @@ services:
       - internal
       - proxy
 
-  # ─── Infrastructure ───────────────────────────────────────────────────────────
+  # --- Infrastructure ---
 
   # Reverse proxy and TLS/UI gateway
   nginx-proxy-manager:
